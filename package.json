@@ -5,8 +5,12 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:static": "STATIC_EXPORT=true next build",
     "start": "next start",
-    "lint": "eslint"
+    "start:static": "npx serve out",
+    "lint": "eslint",
+    "predeploy:static": "npm run build:static",
+    "deploy:static": "gh-pages -d out"
   },
   "dependencies": {
     "react": "19.2.0",
@@ -21,6 +25,7 @@
     "@tailwindcss/postcss": "^4",
     "tailwindcss": "^4",
     "eslint": "^9",
-    "eslint-config-next": "16.0.0"
+    "eslint-config-next": "16.0.0",
+    "gh-pages": "^7.0.0"
   }
 }
