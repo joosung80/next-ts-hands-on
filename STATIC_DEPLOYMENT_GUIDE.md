@@ -7,13 +7,53 @@
 ### next.config.ts
 - **조건부 Static Export**: `process.env.STATIC_EXPORT === 'true'`일 때 활성화.
   - `output: 'export'`: 빌드 시 정적 파일(out/ 디렉토리) 생성 (서버 코드 제거, CSR 중심).
-  - **`basePath: '/next-ts-hands-on'`**: GitHub Pages의 리포지토리 경로 설정 (필수). 예: `https://username.github.io/repo-name/`에서 `/repo-name`이 basePath.
+  - **`basePath: '/next-ts-hands-on'`**: GitHub Pages의 리포지토리 경로 설정 (**필수**). 
   - **`assetPrefix: '/next-ts-hands-on'`**: 정적 자원(_next/, CSS, JS 등) 경로 접두사 (basePath와 동일하게 설정).
   - `trailingSlash: true`: GitHub Pages 라우팅 호환 (예: /about/ 접근).
   - `images: { unoptimized: true }`: 이미지 최적화 비활성화 (정적 빌드에서 서버 필요 없음).
 - **동적 모드**: 환경 변수 미설정 시 기본 Next.js 동작 (SSR, API 라우트 지원). Dynamic 배포에서 `output: 'standalone'`으로 Cloud Run 호환.
 - **빌드 전환**: env 변수로 static/dynamic 전환 – 하나의 소스 커버 (대화 종합). 학습 팁: env 변경 후 빌드 비교로 차이 이해 (out/ vs .next/).
 - **⚠️ 중요**: basePath와 assetPrefix를 **본인의 리포지토리 이름**으로 변경해야 함. 예: 리포지토리가 `my-app`이면 `basePath: '/my-app'`.
+
+#### 🔑 basePath/assetPrefix가 필수인 이유
+
+**GitHub Pages URL 구조:**
+```
+https://username.github.io/repo-name/
+                          └───┬───┘
+                          이 부분이 문제!
+```
+
+**basePath 없으면 404 에러 발생:**
+```
+❌ 브라우저가 찾는 경로:
+   https://joosung80.github.io/_next/static/css/app.css
+                               ↑ 루트(/)에서 찾음
+
+✅ 실제 파일 위치:
+   https://joosung80.github.io/next-ts-hands-on/_next/static/css/app.css
+                               └──────┬──────┘
+                                 누락된 부분 → 404!
+```
+
+**basePath 설정 후:**
+```
+✅ Next.js가 HTML 생성:
+   <script src="/next-ts-hands-on/_next/static/chunks/main.js">
+                └──────┬──────┘
+            자동으로 prefix 추가!
+
+✅ 브라우저 요청 = 실제 위치:
+   https://joosung80.github.io/next-ts-hands-on/_next/static/chunks/main.js
+   경로 일치! → 200 OK
+```
+
+**언제 필요한가?**
+- ✅ **필수**: `username.github.io/repo-name/` (프로젝트 사이트)
+- ❌ **불필요**: `username.github.io/` (개인 사이트, 리포명: username.github.io)
+- ❌ **불필요**: Vercel, Netlify 등 루트 도메인 배포
+
+**Next.js 공식 문서:** [basePath](https://nextjs.org/docs/app/api-reference/next-config-js/basePath) - "To deploy a Next.js application under a **sub-path** of a domain"
 
 ### package.json
 - **추가 스크립트** (정적 배포용):
@@ -181,7 +221,42 @@
 - Static: `npm run build:static` → Pages (CSR 포스트 로딩 후).
 - 테스트: 빌드 비교 (out/ CSR vs .next/ SSR). F12 Elements (Dynamic HTML 데이터) vs Network (Static fetch).
 
-## 5. 주의사항 및 제한 (정적 배포)
+## 5. Dynamic Routes (참고용)
+
+현재 프로젝트는 Static Routes만 사용하므로 불필요하지만, 블로그처럼 Dynamic Routes를 사용하는 경우 `generateStaticParams`가 필요합니다.
+
+### Dynamic Routes 예시 (`[...slug]` 등 사용 시)
+
+```typescript
+// app/post/[...slug]/page.tsx
+export async function generateStaticParams() {
+  const posts = await getAllPosts();
+  
+  return posts.map(post => ({
+    slug: post.slug.split('/'),
+  }));
+}
+
+export default function PostPage({ params }: { params: { slug: string[] } }) {
+  // 포스트 렌더링
+}
+```
+
+**왜 필요한가?**
+- Static Export 시 Dynamic Routes는 빌드 타임에 미리 생성되어야 함
+- `generateStaticParams`로 모든 가능한 경로를 Next.js에 알려줌
+- 런타임에 동적 생성 불가 (SSR 없음)
+
+**현재 프로젝트**:
+- ✅ `/` (홈)
+- ✅ `/about` (소개)
+- ❌ Dynamic Routes 없음 → `generateStaticParams` 불필요
+
+**참고**: [Next.js 공식 문서 - generateStaticParams](https://nextjs.org/docs/app/api-reference/functions/generate-static-params)
+
+---
+
+## 6. 주의사항 및 제한 (정적 배포)
 - API Route: Static 무시 (localStorage 대체).
 - 동적 기능: 서버 코드 에러 – 클라이언트 이동.
 - 라우팅: 파일 기반 (about/page.tsx OK).
@@ -196,24 +271,46 @@
   - **포스트 로드 실패 (page.tsx)**: 원인 서버 fetch 무시. 해결 조건부 CSR/SSR (ClientHomePage useEffect). 영향 Static CSR 로드, Dynamic SSR 즉시. 팁: F12 Network (Static fetch) vs Elements (Dynamic HTML).
   - **🔥 GitHub Pages 404 에러 (JS/CSS/포스트 안 보임)**: **가장 흔한 배포 오류**
     - **현상**: 배포 성공했지만 빈 페이지, Console에 404 에러 다수, 포스트 안 보임, 스타일 깨짐
-    - **원인 1 - Jekyll `_next` 무시**: GitHub Pages가 기본적으로 Jekyll 사용 → `_next` 디렉토리 무시 → 모든 JS/CSS 404
+    
+    - **원인 1 - Jekyll `_next` 무시**: 
+      - GitHub Pages가 기본적으로 Jekyll 사용
+      - Jekyll은 `_`로 시작하는 디렉토리(`_next`, `_app` 등)를 무시
+      - 모든 JS/CSS 파일이 404 에러
     - **해결 1**: `public/.nojekyll` 파일 생성 (Jekyll 비활성화)
-    - **원인 2 - `.nojekyll` 배포 안 됨**: `gh-pages` 패키지가 dot 파일 기본 무시
+    
+    - **원인 2 - `.nojekyll` 배포 안 됨**: 
+      - `gh-pages` 패키지가 dot 파일(`.`로 시작)을 기본 무시
+      - `.nojekyll`이 gh-pages 브랜치에 업로드 안 됨
     - **해결 2**: `package.json`의 `deploy:static`에 `-t` 옵션 추가 (`gh-pages -d out -t`)
-    - **원인 3 - basePath 누락**: Next.js가 루트(`/`)에서 자원 찾음 → GitHub Pages는 `/repo-name/` 경로
+    
+    - **원인 3 - basePath 누락 (경로 불일치)**:
+      ```
+      배포 URL:  username.github.io/repo-name/
+      Next.js:   /_next/static/... (루트에서 찾음)
+      브라우저:  username.github.io/_next/static/... (404!)
+      실제 위치: username.github.io/repo-name/_next/static/... (여기 있음)
+                                     └─────┬─────┘
+                                     누락된 부분!
+      ```
     - **해결 3**: `next.config.ts`에 `basePath`와 `assetPrefix` 추가 (리포지토리 이름과 일치)
+      ```typescript
+      basePath: '/repo-name',
+      assetPrefix: '/repo-name',
+      ```
+    
     - **검증 방법**:
       1. `git ls-tree --name-only origin/gh-pages | grep nojekyll` → `.nojekyll` 확인
       2. 브라우저에서 `https://username.github.io/repo-name/_next/static/chunks/xxx.js` 직접 접속 → 404면 Jekyll 문제
       3. F12 Console → 404 에러 없어야 함
       4. F12 Network → 모든 자원 200 OK
+    
     - **학습 팁**: 
-      - GitHub Pages 배포 시 가장 많이 겪는 문제
-      - Actions 성공 ≠ 사이트 정상 동작 (반드시 브라우저 확인 필요)
-      - Jekyll은 `_`로 시작하는 모든 디렉토리/파일 무시 (`_next`, `_app` 등)
-      - `.nojekyll` 하나로 모든 문제 해결
+      - GitHub Pages 배포 시 가장 많이 겪는 3대 문제
+      - Actions 성공(✅) ≠ 사이트 정상 동작 (반드시 브라우저 확인!)
+      - 세 가지 문제가 모두 해결되어야 정상 작동
+      - **basePath는 경로 일치를 위한 핵심 설정!**
 
-## 6. 업데이트 로그
+## 7. 업데이트 로그
 - **2025-10-24**: Static export, localStorage 추가.
 - **2025-10-24**: 동적 분리, 재구성.
 - **2025-10-24**: TS 에러 해결.
@@ -226,6 +323,17 @@
   - `next.config.ts`에 `basePath`/`assetPrefix` 추가
   - 배포 절차 상세화 (체크리스트, 검증 방법)
   - GitHub Pages 404 에러 해결 섹션 추가 (가장 흔한 문제)
+- **2025-10-25**: 외부 참고 문서와 비교 검증
+  - Dynamic Routes 참고 섹션 추가 (`generateStaticParams`)
+  - `.nojekyll` 관리 방식 우수성 확인 (public/ 자동 복사)
+  - `basePath`/`assetPrefix` 설정 정확성 확인
+  - 조건부 배포 지원 (정적/동적 자동 전환) 장점 확인
+- **2025-10-25**: basePath/assetPrefix 상세 설명 추가
+  - URL 구조 시각적 비교 (404 에러 vs 정상 작동)
+  - 경로 불일치 원리 설명 (브라우저 vs 실제 위치)
+  - 언제 필요/불필요한지 명확한 기준 제시
+  - Next.js 공식 문서 링크 추가
+  - 404 에러 섹션에 경로 불일치 상세 설명 추가
 
 ---
 
