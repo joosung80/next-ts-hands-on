@@ -45,7 +45,9 @@ export default function LikeButton({ postId }: LikeButtonProps) {
   const [likes, setLikes] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
 
-  const isStatic = process.env.STATIC_EXPORT === 'true';
+  // 빌드 타임에 결정되는 모드 (static export vs dynamic)
+  // 클라이언트 컴포넌트에서는 NEXT_PUBLIC_ 접두사 필요
+  const isStatic = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
   const storageKey = `likes_${postId}`;
 
   // (3) 컴포넌트가 마운트될 때 서버에서 좋아요 수를 가져옵니다.

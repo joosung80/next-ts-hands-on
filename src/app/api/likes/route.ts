@@ -39,7 +39,9 @@ import { NextResponse } from 'next/server';
 // postId를 키로, 좋아요 수를 값으로 저장
 const likesStore = new Map<string, number>();
 
-// Static export 호환성을 위해 추가 (빌드 에러 방지)
+// Static Export 호환성을 위해 추가 (빌드 에러 방지)
+// Static export 시: API 무시되지만 빌드 통과
+// Dynamic 모드 시: 정상 API 동작
 export const dynamic = 'force-static';
 
 /**
