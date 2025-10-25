@@ -39,6 +39,9 @@ import { NextResponse } from 'next/server';
 // postId를 키로, 좋아요 수를 값으로 저장
 const likesStore = new Map<string, number>();
 
+// Static export 호환성을 위해 추가 (빌드 에러 방지)
+export const dynamic = 'force-static';
+
 /**
  * GET 요청: 특정 포스트의 좋아요 수 조회
  * 사용 예: GET /api/likes?postId=1

@@ -8,6 +8,9 @@ const nextConfig: NextConfig = {
     trailingSlash: true,
     images: { unoptimized: true },
   }),
+  ...(!isStaticExport && {
+    output: 'standalone',  // Cloud Run 등 컨테이너 배포 호환 (동적 모드)
+  }),
   /* config options here */
 };
 

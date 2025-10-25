@@ -8,9 +8,13 @@ export interface Post {
     body: string;
 }
 
-declare module 'process' {
-  export interface Env {
-    STATIC_EXPORT: string;
-    NEXT_PUBLIC_API_URL?: string;
+declare global {
+  namespace NodeJS {
+    interface ProcessEnv {
+      STATIC_EXPORT: string;
+      NEXT_PUBLIC_API_URL?: string;
+    }
   }
 }
+
+export {};
