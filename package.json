@@ -10,7 +10,7 @@
     "start:static": "npx serve out",
     "lint": "eslint",
     "predeploy:static": "npm run build:static",
-    "deploy:static": "gh-pages -d out"
+    "deploy:static": "gh-pages -d out -t"
   },
   "dependencies": {
     "react": "19.2.0",

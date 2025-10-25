@@ -5,6 +5,8 @@ const isStaticExport = process.env.STATIC_EXPORT === 'true';
 const nextConfig: NextConfig = {
   ...(isStaticExport && {
     output: 'export',
+    basePath: '/next-ts-hands-on',
+    assetPrefix: '/next-ts-hands-on',
     trailingSlash: true,
     images: { unoptimized: true },
   }),

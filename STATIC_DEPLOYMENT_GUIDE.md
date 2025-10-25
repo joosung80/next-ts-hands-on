@@ -7,17 +7,20 @@
 ### next.config.ts
 - **조건부 Static Export**: `process.env.STATIC_EXPORT === 'true'`일 때 활성화.
   - `output: 'export'`: 빌드 시 정적 파일(out/ 디렉토리) 생성 (서버 코드 제거, CSR 중심).
+  - **`basePath: '/next-ts-hands-on'`**: GitHub Pages의 리포지토리 경로 설정 (필수). 예: `https://username.github.io/repo-name/`에서 `/repo-name`이 basePath.
+  - **`assetPrefix: '/next-ts-hands-on'`**: 정적 자원(_next/, CSS, JS 등) 경로 접두사 (basePath와 동일하게 설정).
   - `trailingSlash: true`: GitHub Pages 라우팅 호환 (예: /about/ 접근).
   - `images: { unoptimized: true }`: 이미지 최적화 비활성화 (정적 빌드에서 서버 필요 없음).
 - **동적 모드**: 환경 변수 미설정 시 기본 Next.js 동작 (SSR, API 라우트 지원). Dynamic 배포에서 `output: 'standalone'`으로 Cloud Run 호환.
 - **빌드 전환**: env 변수로 static/dynamic 전환 – 하나의 소스 커버 (대화 종합). 학습 팁: env 변경 후 빌드 비교로 차이 이해 (out/ vs .next/).
+- **⚠️ 중요**: basePath와 assetPrefix를 **본인의 리포지토리 이름**으로 변경해야 함. 예: 리포지토리가 `my-app`이면 `basePath: '/my-app'`.
 
 ### package.json
 - **추가 스크립트** (정적 배포용):
   - `build:static`: `STATIC_EXPORT=true next build` – 정적 빌드 (out/ 생성, bailout 경고 무시 가능).
   - `start:static`: `npx serve out` – 로컬 정적 서버 (serve 글로벌 설치: `npm i -g serve`).
   - `predeploy:static`: `npm run build:static`.
-  - `deploy:static`: `gh-pages -d out` – gh-pages 브랜치 푸시 (GitHub Pages 배포).
+  - **`deploy:static`: `gh-pages -d out -t`** – gh-pages 브랜치 푸시. **`-t` 옵션 필수** (dot 파일 포함, `.nojekyll` 배포 위해 필요).
 - **기본 스크립트**: `build`와 `start`는 동적 빌드/서버 (Dynamic 가이드 참조).
 - **의존성**: `gh-pages` (^7.0.0) devDependencies에 추가 (정적 배포 자동화).
 
@@ -70,6 +73,15 @@
 - 로딩/에러 핸들링: 포스트 목록 표시 또는 fallback.
 - **학습 팁**: 클라이언트 컴포넌트를 별도 파일로 분리 – 서버 파일(page.tsx)에서 import. 왜? 'use client' 충돌 방지, 코드 재사용성 높임 (Dynamic fallback에도 사용).
 
+### public/.nojekyll (필수 파일)
+- **`public/.nojekyll` 파일 생성** (빈 파일):
+  ```bash
+  touch public/.nojekyll
+  ```
+- **왜 필요한가?**: GitHub Pages는 기본적으로 Jekyll을 사용하는데, Jekyll은 `_`로 시작하는 디렉토리(`_next` 등)를 무시함. `.nojekyll` 파일이 있으면 Jekyll을 비활성화하여 `_next` 디렉토리가 정상 작동.
+- **자동 복사**: Next.js가 빌드 시 `public/` 내용을 `out/`으로 자동 복사. `package.json`의 `-t` 옵션으로 gh-pages 브랜치에 배포됨.
+- **학습 팁**: 이 파일 없으면 모든 JS/CSS 파일이 404 에러 발생 (포스트/스타일 안 보임). 가장 흔한 GitHub Pages 배포 오류.
+
 ### .env.local (사용자 직접 생성 필요)
 - 프로젝트 루트에 생성:
   ```
@@ -93,10 +105,61 @@
 3. LikeButton: API 호출 (콘솔 로그).
 
 ## 3. GitHub Pages 배포 절차
-1. GitHub repo 준비: `git init/add/commit/push main`.
-2. `npm run deploy:static` – gh-pages 푸시.
-3. Settings > Pages > Source: gh-pages.
-4. URL 확인: 루트 – CSR fetch 포스트 로드 (Network 탭). about/ – 정적. 학습 팁: 배포 후 F12로 CSR 동작 확인 (fetch 요청).
+
+### 초기 설정 (한 번만)
+1. **리포지토리 이름 확인**: 예) `next-ts-hands-on`
+2. **`next.config.ts` 수정**: `basePath`와 `assetPrefix`를 리포지토리 이름으로 변경
+   ```typescript
+   basePath: '/next-ts-hands-on',  // ← 본인의 리포지토리 이름
+   assetPrefix: '/next-ts-hands-on',
+   ```
+3. **`public/.nojekyll` 파일 생성**:
+   ```bash
+   touch public/.nojekyll
+   ```
+4. **GitHub repo 준비**: 
+   ```bash
+   git init
+   git add .
+   git commit -m "Initial commit"
+   git remote add origin https://github.com/username/repo-name.git
+   git push -u origin main
+   ```
+
+### 배포 (매번)
+1. **배포 실행**:
+   ```bash
+   npm run deploy:static
+   ```
+   - 자동으로 빌드 → gh-pages 브랜치 푸시
+   
+2. **GitHub Pages 활성화** (최초 1회):
+   - GitHub 리포지토리 > Settings > Pages
+   - Source: `gh-pages` 브랜치 선택
+   - Save
+
+3. **배포 확인** (1-2분 대기 후):
+   - GitHub Actions: `https://github.com/username/repo-name/actions`
+     - ✅ 녹색 체크: 배포 성공
+     - ❌ 빨간 X: 에러 확인
+   - **실제 사이트**: `https://username.github.io/repo-name/`
+     - F12 > Console: 에러 없는지 확인
+     - F12 > Network: JS/CSS 파일 200 OK 확인
+     - 포스트 5개 정상 표시
+     - 좋아요 버튼 작동 테스트
+
+### 🔍 배포 후 체크리스트
+- [ ] GitHub Actions 녹색 체크마크
+- [ ] 사이트 접속 가능
+- [ ] Console 에러 없음 (404 에러 특히 주의)
+- [ ] 포스트 5개 로드됨
+- [ ] 좋아요 버튼 작동 (localStorage)
+- [ ] About 페이지 이동 가능
+
+### ⚠️ 문제 발생 시
+- **404 에러 (JS/CSS)**: `.nojekyll` 파일 확인, `-t` 옵션 확인
+- **빈 페이지**: basePath 설정 확인
+- **포스트 안 보임**: Console 에러 확인, API 호출 상태 확인
 
 ## 4. 하나의 소스로 정적/동적 배포 커버 (대화 종합)
 하나의 코드베이스로 빌드 env 전환으로 커버 가능 (Next.js 표준). 완전 동시 불가하지만, 조건부 로직으로 실질 지원. 학습 팁: env 변수로 빌드 차이 이해 (Static CSR vs Dynamic SSR).
@@ -131,6 +194,24 @@
   - **API Route 에러**: 원인 static에서 서버 필요. 해결 `dynamic = 'force-static'`. 영향 빌드 통과, Static 무시. 팁: Dynamic에서만 API 테스트.
   - **'use client' 지시어 에러 (page.tsx)**: 원인 파일 중간 배치/훅 충돌 (서버 컴포넌트에서 useState/useEffect). 해결 ClientHomePage 별도 파일 ('use client' 맨 위) + import 조건부 export. 영향 Static CSR 성공, Dynamic SSR 유지. 학습 팁: 서버/클라이언트 분리로 Next.js 하이브리드 이해 – import로 재사용.
   - **포스트 로드 실패 (page.tsx)**: 원인 서버 fetch 무시. 해결 조건부 CSR/SSR (ClientHomePage useEffect). 영향 Static CSR 로드, Dynamic SSR 즉시. 팁: F12 Network (Static fetch) vs Elements (Dynamic HTML).
+  - **🔥 GitHub Pages 404 에러 (JS/CSS/포스트 안 보임)**: **가장 흔한 배포 오류**
+    - **현상**: 배포 성공했지만 빈 페이지, Console에 404 에러 다수, 포스트 안 보임, 스타일 깨짐
+    - **원인 1 - Jekyll `_next` 무시**: GitHub Pages가 기본적으로 Jekyll 사용 → `_next` 디렉토리 무시 → 모든 JS/CSS 404
+    - **해결 1**: `public/.nojekyll` 파일 생성 (Jekyll 비활성화)
+    - **원인 2 - `.nojekyll` 배포 안 됨**: `gh-pages` 패키지가 dot 파일 기본 무시
+    - **해결 2**: `package.json`의 `deploy:static`에 `-t` 옵션 추가 (`gh-pages -d out -t`)
+    - **원인 3 - basePath 누락**: Next.js가 루트(`/`)에서 자원 찾음 → GitHub Pages는 `/repo-name/` 경로
+    - **해결 3**: `next.config.ts`에 `basePath`와 `assetPrefix` 추가 (리포지토리 이름과 일치)
+    - **검증 방법**:
+      1. `git ls-tree --name-only origin/gh-pages | grep nojekyll` → `.nojekyll` 확인
+      2. 브라우저에서 `https://username.github.io/repo-name/_next/static/chunks/xxx.js` 직접 접속 → 404면 Jekyll 문제
+      3. F12 Console → 404 에러 없어야 함
+      4. F12 Network → 모든 자원 200 OK
+    - **학습 팁**: 
+      - GitHub Pages 배포 시 가장 많이 겪는 문제
+      - Actions 성공 ≠ 사이트 정상 동작 (반드시 브라우저 확인 필요)
+      - Jekyll은 `_`로 시작하는 모든 디렉토리/파일 무시 (`_next`, `_app` 등)
+      - `.nojekyll` 하나로 모든 문제 해결
 
 ## 6. 업데이트 로그
 - **2025-10-24**: Static export, localStorage 추가.
@@ -139,5 +220,36 @@
 - **2025-10-24**: API dynamic 추가, bailout/CSR 설명.
 - **2025-10-24**: page.tsx 조건부 SSR/CSR, 포스트 로드 해결, 하나의 소스 커버 상세 (대화 종합).
 - **2025-10-24**: 'use client' 에러 해결 (ClientHomePage 분리), 에러 섹션 학습 팁 추가 (대화 반영).
+- **2025-10-25**: GitHub Pages 404 에러 해결 (Jekyll `_next` 무시 문제)
+  - `public/.nojekyll` 파일 추가
+  - `package.json`에 `-t` 옵션 추가 (dot 파일 배포)
+  - `next.config.ts`에 `basePath`/`assetPrefix` 추가
+  - 배포 절차 상세화 (체크리스트, 검증 방법)
+  - GitHub Pages 404 에러 해결 섹션 추가 (가장 흔한 문제)
 
-문제가 발생하면 `npm run build:static` 출력 공유하세요!
+---
+
+## 📋 빠른 시작 (GitHub Pages 배포)
+
+### 1. 필수 파일 설정
+```bash
+# .nojekyll 생성
+touch public/.nojekyll
+
+# next.config.ts 수정 (리포지토리 이름으로 변경)
+# basePath: '/your-repo-name',
+# assetPrefix: '/your-repo-name',
+```
+
+### 2. 배포
+```bash
+npm run deploy:static
+```
+
+### 3. 확인
+- GitHub Actions: ✅ 체크
+- 사이트: https://username.github.io/repo-name/
+- Console: 에러 없음
+- 포스트: 5개 표시
+
+문제가 발생하면 `npm run build:static` 출력 및 브라우저 Console 에러를 공유하세요!
