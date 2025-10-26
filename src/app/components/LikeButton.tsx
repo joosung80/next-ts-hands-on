@@ -42,9 +42,8 @@ type LikeButtonProps = {
 export default function LikeButton({ postId }: LikeButtonProps) {
   
   // (2) useState를 사용해 '좋아요' 상태를 관리합니다.
-  const [likes, setLikes] = useState<number | null>(null);  // null = 아직 로드 안 됨
-  const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingData, setIsLoadingData] = useState(true);  // 초기 데이터 로딩 상태
+  const [likes, setLikes] = useState<number>(0);  // 초기값 0으로 단순화
+  const [isLoading, setIsLoading] = useState(false);  // 하나의 로딩 상태로 통합
 
   // 빌드 타임에 결정되는 모드 (static export vs dynamic)
   // 클라이언트 컴포넌트에서는 NEXT_PUBLIC_ 접두사 필요
@@ -66,20 +65,15 @@ export default function LikeButton({ postId }: LikeButtonProps) {
 
   // (3) 컴포넌트가 마운트될 때 서버에서 좋아요 수를 가져옵니다.
   useEffect(() => {
-    setIsLoadingData(true);
-    
     if (isStatic) {
       // 정적 모드: localStorage에서 로드
       const savedLikes = localStorage.getItem(storageKey);
       if (savedLikes !== null) {
         setLikes(parseInt(savedLikes, 10));
-      } else {
-        setLikes(0);
       }
-      setIsLoadingData(false);
     } else {
       // 동적 모드: API 호출
-      fetchLikes().finally(() => setIsLoadingData(false));
+      fetchLikes();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postId, isStatic, storageKey]);
@@ -90,10 +84,11 @@ export default function LikeButton({ postId }: LikeButtonProps) {
     
     if (isStatic) {
       // 정적 모드: localStorage 업데이트
-      const newLikes = (likes ?? 0) + 1;
+      const newLikes = likes + 1;
       setLikes(newLikes);
       localStorage.setItem(storageKey, newLikes.toString());
       console.log(`LocalStorage updated for post ${postId}: ${newLikes} likes`);
+      setIsLoading(false);  // localStorage는 동기이므로 즉시 완료
     } else {
       // 동적 모드: API 호출
       try {
@@ -116,20 +111,32 @@ export default function LikeButton({ postId }: LikeButtonProps) {
         console.error('API 호출 에러:', error);
         // GitHub Pages 배포 시 여기서 에러 발생
         // 대안: localStorage 사용하거나 에러 메시지 표시
+      } finally {
+        setIsLoading(false);
       }
     }
-    
-    setIsLoading(false);
   };
 
   return (
     <button
       onClick={handleClick}
-      disabled={isLoading || isLoadingData}
+      disabled={isLoading}
       // (6) Tailwind CSS 클래스를 사용해 스타일링합니다.
-      className="px-4 py-2 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+      // min-w-[140px]로 최소 너비 고정 → 크기 변화 방지
+      // relative로 로딩 스피너 절대 위치 지정 가능
+      className="relative min-w-[140px] px-4 py-2 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
     >
-      {isLoadingData ? '...' : isLoading ? '...' : `👍 좋아요 (${likes ?? 0})`}
+      {/* 로딩 중에도 텍스트 유지하고 투명도로 표시 */}
+      <span className={isLoading ? 'opacity-50' : 'opacity-100'}>
+        👍 좋아요 ({likes})
+      </span>
+      
+      {/* 로딩 스피너 오버레이 (선택사항) */}
+      {isLoading && (
+        <span className="absolute inset-0 flex items-center justify-center">
+          <span className="animate-spin">⏳</span>
+        </span>
+      )}
     </button>
   );
 }
