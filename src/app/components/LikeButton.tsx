@@ -42,27 +42,14 @@ type LikeButtonProps = {
 export default function LikeButton({ postId }: LikeButtonProps) {
   
   // (2) useState를 사용해 '좋아요' 상태를 관리합니다.
-  const [likes, setLikes] = useState(0);
+  const [likes, setLikes] = useState<number | null>(null);  // null = 아직 로드 안 됨
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(true);  // 초기 데이터 로딩 상태
 
   // 빌드 타임에 결정되는 모드 (static export vs dynamic)
   // 클라이언트 컴포넌트에서는 NEXT_PUBLIC_ 접두사 필요
   const isStatic = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
   const storageKey = `likes_${postId}`;
-
-  // (3) 컴포넌트가 마운트될 때 서버에서 좋아요 수를 가져옵니다.
-  useEffect(() => {
-    if (isStatic) {
-      // 정적 모드: localStorage에서 로드
-      const savedLikes = localStorage.getItem(storageKey);
-      if (savedLikes !== null) {
-        setLikes(parseInt(savedLikes, 10));
-      }
-    } else {
-      // 동적 모드: API 호출
-      fetchLikes();
-    }
-  }, [postId, isStatic]);
 
   // 서버에서 좋아요 수 조회
   const fetchLikes = async () => {
@@ -77,13 +64,33 @@ export default function LikeButton({ postId }: LikeButtonProps) {
     }
   };
 
+  // (3) 컴포넌트가 마운트될 때 서버에서 좋아요 수를 가져옵니다.
+  useEffect(() => {
+    setIsLoadingData(true);
+    
+    if (isStatic) {
+      // 정적 모드: localStorage에서 로드
+      const savedLikes = localStorage.getItem(storageKey);
+      if (savedLikes !== null) {
+        setLikes(parseInt(savedLikes, 10));
+      } else {
+        setLikes(0);
+      }
+      setIsLoadingData(false);
+    } else {
+      // 동적 모드: API 호출
+      fetchLikes().finally(() => setIsLoadingData(false));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [postId, isStatic, storageKey]);
+
   // 좋아요 버튼 클릭 핸들러
   const handleClick = async () => {
     setIsLoading(true);
     
     if (isStatic) {
       // 정적 모드: localStorage 업데이트
-      const newLikes = likes + 1;
+      const newLikes = (likes ?? 0) + 1;
       setLikes(newLikes);
       localStorage.setItem(storageKey, newLikes.toString());
       console.log(`LocalStorage updated for post ${postId}: ${newLikes} likes`);
@@ -118,11 +125,11 @@ export default function LikeButton({ postId }: LikeButtonProps) {
   return (
     <button
       onClick={handleClick}
-      disabled={isLoading}
+      disabled={isLoading || isLoadingData}
       // (6) Tailwind CSS 클래스를 사용해 스타일링합니다.
       className="px-4 py-2 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
     >
-      {isLoading ? '...' : `👍 좋아요 (${likes})`}
+      {isLoadingData ? '...' : isLoading ? '...' : `👍 좋아요 (${likes ?? 0})`}
     </button>
   );
 }

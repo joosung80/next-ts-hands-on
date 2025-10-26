@@ -39,10 +39,84 @@ import { NextResponse } from 'next/server';
 // postId를 키로, 좋아요 수를 값으로 저장
 const likesStore = new Map<string, number>();
 
-// Static Export 호환성을 위해 추가 (빌드 에러 방지)
-// Static export 시: API 무시되지만 빌드 통과
-// Dynamic 모드 시: 정상 API 동작
-export const dynamic = 'force-static';
+/**
+ * ⚙️ export const dynamic - Next.js Route Segment Config
+ * 
+ * 이 설정은 Next.js가 이 API Route를 빌드 타임에 어떻게 처리할지 결정합니다.
+ * 
+ * 🔍 왜 빌드에 영향을 주나요?
+ * 
+ * Next.js는 빌드 시 페이지와 API Route를 분석하여:
+ * 1️⃣ Static (정적): 빌드 타임에 미리 생성 → HTML/JSON 파일로 저장
+ * 2️⃣ Dynamic (동적): 런타임에 서버에서 실행 → 요청 시마다 새로 생성
+ * 
+ * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ * 
+ * 📌 'force-dynamic' (동적 렌더링 강제)
+ * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ * 
+ * 빌드 결과:
+ *   ✅ API Route가 서버 코드로 유지됨 (.next/server/app/api/likes/route.js)
+ *   ✅ 런타임에 실행되어 요청마다 새로운 응답 생성
+ *   ✅ GET/POST 요청 정상 처리
+ * 
+ * 배포 요구사항:
+ *   🖥️  Node.js 서버 필요 (Vercel, AWS, Cloud Run, Docker 등)
+ *   ❌ GitHub Pages 같은 정적 호스팅 불가
+ * 
+ * 사용 예시:
+ *   - 데이터베이스 조회/수정
+ *   - 외부 API 호출
+ *   - 사용자 인증
+ *   - 실시간 데이터 처리
+ * 
+ * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ * 
+ * 📌 'force-static' (정적 렌더링 강제)
+ * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ * 
+ * 빌드 결과:
+ *   ⚠️  API Route가 빌드 타임에 한 번만 실행됨
+ *   ⚠️  결과가 정적 파일로 저장됨 (변경 불가)
+ *   ⚠️  POST/PUT/DELETE 같은 쓰기 작업 불가
+ * 
+ * output: 'export' (정적 빌드) 시:
+ *   ❌ API Route 자체가 빌드 결과(out/)에서 제외됨
+ *   💡 'force-static'으로 설정하면 → 빌드 에러 방지 (경고만 표시)
+ *   💡 'force-dynamic'으로 설정하면 → 빌드 에러 발생!
+ *   
+ *   빌드 에러 예시:
+ *   Error: Page "/api/likes/route" is using dynamic rendering but 
+ *   'output: export' requires static rendering.
+ * 
+ * 배포 요구사항:
+ *   📁 정적 파일만 필요 (GitHub Pages, Netlify, S3 등)
+ *   ❌ 서버 코드 실행 불가
+ * 
+ * 대안:
+ *   - localStorage 사용 (클라이언트 전용)
+ *   - 외부 BaaS (Supabase, Firebase 등)
+ *   - 별도 API 서버 (Vercel Functions 등)
+ * 
+ * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ * 
+ * 🎯 이 프로젝트에서의 사용법:
+ * 
+ * 🔹 Dynamic 모드 개발/배포 (Vercel, AWS, Cloud Run):
+ *    export const dynamic = 'force-dynamic';  ← 현재 설정
+ *    npm run build
+ * 
+ * 🔹 Static 모드 배포 (GitHub Pages):
+ *    1. export const dynamic = 'force-static';  ← 수동 변경
+ *    2. npm run build:static
+ *    3. LikeButton이 자동으로 localStorage 사용 (API 대신)
+ * 
+ * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ * 
+ * 📚 참고: Next.js Route Segment Config 공식 문서
+ * https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config#dynamic
+ */
+export const dynamic = 'force-dynamic';
 
 /**
  * GET 요청: 특정 포스트의 좋아요 수 조회
