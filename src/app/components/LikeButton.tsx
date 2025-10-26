@@ -42,8 +42,9 @@ type LikeButtonProps = {
 export default function LikeButton({ postId }: LikeButtonProps) {
   
   // (2) useState를 사용해 '좋아요' 상태를 관리합니다.
-  const [likes, setLikes] = useState<number>(0);  // 초기값 0으로 단순화
-  const [isLoading, setIsLoading] = useState(false);  // 하나의 로딩 상태로 통합
+  // null = 아직 서버에서 데이터를 가져오지 않은 상태
+  const [likes, setLikes] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // 빌드 타임에 결정되는 모드 (static export vs dynamic)
   // 클라이언트 컴포넌트에서는 NEXT_PUBLIC_ 접두사 필요
@@ -68,9 +69,7 @@ export default function LikeButton({ postId }: LikeButtonProps) {
     if (isStatic) {
       // 정적 모드: localStorage에서 로드
       const savedLikes = localStorage.getItem(storageKey);
-      if (savedLikes !== null) {
-        setLikes(parseInt(savedLikes, 10));
-      }
+      setLikes(savedLikes !== null ? parseInt(savedLikes, 10) : 0);
     } else {
       // 동적 모드: API 호출
       fetchLikes();
@@ -84,7 +83,7 @@ export default function LikeButton({ postId }: LikeButtonProps) {
     
     if (isStatic) {
       // 정적 모드: localStorage 업데이트
-      const newLikes = likes + 1;
+      const newLikes = (likes ?? 0) + 1;  // null 안전 처리
       setLikes(newLikes);
       localStorage.setItem(storageKey, newLikes.toString());
       console.log(`LocalStorage updated for post ${postId}: ${newLikes} likes`);
@@ -128,7 +127,7 @@ export default function LikeButton({ postId }: LikeButtonProps) {
     >
       {/* 로딩 중에도 텍스트 유지하고 투명도로 표시 */}
       <span className={isLoading ? 'opacity-50' : 'opacity-100'}>
-        👍 좋아요 ({likes})
+        👍 좋아요 ({likes ?? '...'})
       </span>
       
       {/* 로딩 스피너 오버레이 (선택사항) */}
