@@ -123,7 +123,7 @@ export default function LikeButton({ postId }: LikeButtonProps) {
       // (6) Tailwind CSS 클래스를 사용해 스타일링합니다.
       // min-w-[140px]로 최소 너비 고정 → 크기 변화 방지
       // relative로 로딩 스피너 절대 위치 지정 가능
-      className="relative min-w-[140px] px-4 py-2 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+      className="relative min-w-[140px] px-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {/* 로딩 중에도 텍스트 유지하고 투명도로 표시 */}
       <span className={isLoading ? 'opacity-50' : 'opacity-100'}>
