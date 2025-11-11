@@ -32,7 +32,7 @@ async function ServerHomePage() {
       </h1>
       
       <div className="text-center mb-10">
-        <Link href="/about" className="text-blue-600 hover:underline text-lg">
+        <Link href="/about" className="text-green-600 hover:underline text-lg">
           소개 페이지로 가기
         </Link>
       </div>
